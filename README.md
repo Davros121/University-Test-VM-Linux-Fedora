@@ -24,3 +24,15 @@ Ejm. mm, fs, signal, real_parent, cred
 #5. Veruficacion Empirica
 Ejecutar "cat /proc/self/status" en su maquina local. Mapear 4 salidas con el codigo C encontrado
 Realizar un Push al repositorio de Github de su equipo
+
+En caso de usar Fedora, estos comandos cambian a 
+
+1. sudo dnf install git gcc make -y
+
+2. Para evitar el uso de paquetes RPM, se puede clonar el repositorio oficial del Kernel de Linux directamente a la carpeta de usuario.
+
+   cd /usr/src
+   
+
+4. 
+

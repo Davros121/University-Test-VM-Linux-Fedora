@@ -1,1 +1,15 @@
+** Analisis de los 10 Subcampos**
 
+
+| Nombre del Campo | Tipo de Datos C      | Subsistema Asociado| Propósito / Función                                                                                   |
+| :---             | :---                 | :---               |     :---                                                                                              |
+| mm               | struct mm_struct*    | mm                 | almacena toda la informacion del espacio de memoria virtual asignada a este proceso                   |
+| active_mm        | struct mm_struct*    | mm                 | apunta al espacio de memoria que el proceso esta usando activamente en el milisegundo actual          |
+| signal           | struct signal_struct*| signal             | almacena la configuracion, las reglas del comportamiento y el estado de todas las señales del proceso |
+| fs               | struct fs_struct     | fs                 | almacena la informacion del contexto del sistema de archivos para el proceso                          |
+| pid              | pid_t                | Process Core       | almacena el identificador unico global del proceso dentro del sistema operativo                       |
+| comm             | char[TASK_COMM_LEN]  | Process Core       | guarda el nombre corto del archivo ejecutable o programa que inicio este proceso                      |
+| __state          | unsigned int         | Scheduler          | registra el estado de ejecucion actual del proceso como corriendo, durmiendo o zombie                 |
+| prio             | int                  | Scheduler          | define el valor de prioridad dinamica que utiliza el planificador para asignar tiempo de CPU          |
+| real_parent      | struct task_struct*  | Process Core       | contiene el puntero de enlace directo hacia el proceso padre que creo o dio origen a este proceso     |
+| files            | struct files_struct* | fs                 | guarda la tabla y el conteo de todos los descriptores de archivos que el proceso tiene abiertos       |

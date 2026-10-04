@@ -1,0 +1,30 @@
+jesusramirez@fedora:~$ cat /proc/self/status
+Name:	cat
+Umask:	0022
+State:	R (running)
+Tgid:	38306
+Ngid:	0
+Pid:	38306
+PPid:	6078
+
+B. Mapeo comparativo con el código C (struct task_struct)
+• [Salida 1] Nombre del Proceso
+	• Dato Real Terminal: Name: cat
+	• Código C Asociado: comm (char[TASK_COMM_LEN])
+	• Justificación: Muestra el nombre del programa ejecutable en ejecución. El kernel lee este dato directamente desde el arreglo de caracteres comm dentro de la estructura de control del proceso.
+
+• [Salida 2] Estado del Proceso
+	• Dato Real Terminal: State: R (running)
+	• Código C Asociado: __state (unsigned int)
+	• Justificación: Indica que el proceso está activo en la CPU en este milisegundo.
+  El sistema operativo mapea las banderas numéricas internas de la variable __state a su representación visual de letras (como la R).
+
+• [Salida 3] Identificador de Proceso (PID)
+	• Dato Real Terminal: Pid: 38306
+	• Código C Asociado: pid (pid_t)
+	• Justificación: Es el número de identificación único global asignado por Fedora. Se almacena directamente en el tipo de dato numérico primitivo pid de la macro-estructura.
+
+• [Salida 4] Identificador del Grupo de Hilos (TGID)
+	• Dato Real Terminal: Tgid: 38306
+	• Código C Asociado: tgid (pid_t)
+	• Justificación: Define el identificador del hilo principal del grupo. Al ser un comando de un solo hilo, el kernel duplica el valor del PID asignándolo a la variable tgid.

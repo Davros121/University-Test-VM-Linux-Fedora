@@ -1,129 +1,130 @@
-# University-Test-VM-Linux-Fedora
+# IUPSM For-Exec-Wait SO II
 This is a graded test following numbered steps to experiment and comprehend the usefullness and potential of a Virtual Machine (VM)
 
 # Integrantes
 Jesus Ernesto Ramirez Ruiz 
 Anthony Alvarado
 
+El siguiente experimento/actividad fue realizado en una maquina virtual empleado el S.O. Linux Fedora por medio de Oracle VirtualBox.
+Cabe destacar que algunos "Comandos" difieren dependiendo de que "distro" (Distribución) uses. Un ejemplo de comandos simples de diferentes distros son:
+
+Ubuntu/ Debian / Linux Mint = sudo apt update 
+
+Arch Linux / Manjaro        = sudo pacman -Syu
+
 #Instrucciones para realizar la misión de Laboratorio
 
-#1. Instalar Fuente
-"sudo apt installl linux-source"
+Paso 1: Preparar el entorno de desarrollo en Fedora
+Antes de escribir código, asegúrate de tener instaladas las herramientas esenciales de compilación (gcc) y el editor de texto o entorno que prefieras (nano, vim o code).
 
-#2. Extraer y localizar
-"cd /usr /src && sudo tar xf linux-source-*.tar.vz2"
+Abre tu terminal en Fedora.
 
-#3. Navegación Estructural
-Abrir en VSCode. Usar Intellisense (F12) o búsqueda de símbolos para encontrar la definición de 
-"struct task_struct"
+Actualiza los repositorios e instala las herramientas de desarrollo básicas (si aún no las tienes):
 
-#4. Análisis 
-Extraer 10 subcampos en una tabal detallando: nombre, tipo C. subsistema y proposito
-Ejm. mm, fs, signal, real_parent, cred
+Bash
+sudo dnf update -y
+sudo dnf groupinstall "Development Tools" -y
+Crea un directorio de trabajo para organizar tu práctica y entra en él:
 
-#5. Veruficacion Empirica
-Ejecutar "cat /proc/self/status" en su maquina local. Mapear 4 salidas con el codigo C encontrado
-Realizar un Push al repositorio de Github de su equipo
+Bash
+mkdir mini-shell-practica
+cd mini-shell-practica
+Paso 2: Crear el archivo fuente de la Mini Shell
+Vamos a programar el patrón canónico analizado en el material (crear un proceso, ejecutar un comando externo y esperar a que termine).
 
-Los pasos anteriores son esctructurados para un Sistema de Linux Denby, en mi caso use un sistema Linux Fedora, para facilitar su practica los pasos son los siguientes:
+Crea y abre el archivo con tu editor favorito:
 
-# Guía de Trabajo: Análisis del Código Fuente de Linux (Fedora)
+Bash
+nano mini_shell.c
+Escribe el siguiente código base en C. Este programa simula el ciclo de vida básico de una Shell ejecutando un comando de prueba (como ls -l):
 
-Este documento detalla los pasos secuenciales para clonar el repositorio, preparar el entorno de desarrollo en Fedora, localizar las estructuras esenciales del kernel de Linux y realizar la verificación empírica.
+C
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
----
+int main() {
+    pid_t pid;
+    int status;
 
-## 1. Migración de GitHub a Carpeta Personal (Clonación)
+    printf("=== MINI SHELL INICIADA (PID: %d) ===\n", getpid());
 
-Para comenzar a trabajar, primero se debe traer el repositorio digital de GitHub a su máquina local dentro de su espacio de trabajo personal.
+    // 1. Crear el proceso hijo usando fork()
+    pid = fork();
 
-1. Abra la terminal de Linux Fedora.
-2. Descargue el repositorio clonándolo con su **Token de Acceso Personal (PAT)** para autenticar la sesión de forma segura:
-   ```bash
-   git clone https://Nombre_de_Usuario:TU_TOKEN_AQUÍ@github.com
-   ```
-3. Acceda a la carpeta del proyecto recién creada:
-   ```bash
-   cd University-Test-VM-Linux-Fedora
-   ```
+    if (pid < 0) {
+        // Error crítico: no se pudo crear el proceso (Bug 1 del documento)
+        perror("Error al hacer fork");
+        exit(EXIT_FAILURE);
+    } 
+    else if (pid == 0) {
+        // --- PROCESO HIJO ---
+        printf("[Hijo] Hola, soy el proceso hijo con PID: %d\n", getpid());
 
----
-**Como generas un Token de Acceso personal?**
-Dentro de Github ir a tu cuenta y proceder con los siguientes pasos: Usuario/ Opciones/ Opciones de Desarrollador/ Tokens de Acceso Personal/ Tokens [Clasico]/ Habilitar primera opcion REPO. Hecho esto tendras habilitado un codigo temporal que facilita el acceso para la migracion del repositorio
+        // Argumentos para el comando a ejecutar
+        char *args[] = {"ls", "-l", NULL};
 
-## 2. Instalar Código Fuente y Cabeceras del Kernel
+        // 2. Transformar el proceso hijo con execvp()
+        execvp(args[0], args);
 
-A diferencia de otras distribuciones, Fedora organiza las cabeceras directamente en el directorio de desarrollo del sistema sin necesidad de realizar una extracción manual de un archivo comprimido.
+        // Si execvp retorna, ocurrió un error (ej. comando no encontrado)
+        perror("[Hijo] Error en execvp");
+        _exit(EXIT_FAILURE); // Usar _exit para evitar vaciar búferes heredados
+    } 
+    else {
+        // --- PROCESO PADRE ---
+        printf("[Padre] Esperando a que termine el proceso hijo (PID: %d)...\n", pid);
 
-1. Diríjase a la ruta del kernel dinámico de su máquina:
-   ```bash
-   cd /usr/src/kernels/$(uname -r)/
-   ```
-2. El archivo objetivo que debe examinar se encuentra en la siguiente ruta relativa:
-   * `include/linux/sched.h`
+        // 3. Recolectar al hijo con waitpid() para evitar zombies
+        pid_t waited_pid = waitpid(pid, &status, 0);
 
----
+        if (waited_pid < 0) {
+            perror("Error en waitpid");
+        } else {
+            if (WIFEXITED(status)) {
+                printf("[Padre] El hijo terminó correctamente con código: %d\n", WEXITSTATUS(status));
+            } else {
+                printf("[Padre] El hijo terminó de forma anormal.\n");
+            }
+        }
+    }
 
+    printf("=== MINI SHELL FINALIZADA ===\n");
+    return 0;
+}
+Guarda los cambios y sal del editor (en nano, presiona Ctrl+O, Enter para guardar, y Ctrl+X para salir).
 
-## 3. Localizar Archivos de Cabecera
+Paso 3: Compilar el programa
+Verifica que el código cumpla con la sintaxis de C y genera el ejecutable utilizando gcc.
 
-na vez posicionado dentro del directorio del kernel en la terminal, abra el archivo de cabecera utilizando su editor de código preferido:
+Ejecuta el comando de compilación:
 
-* **Para abrir en VS Code:**
-  ```bash
-  code include/linux/sched.h
-  ```
-* **Para visualizar directamente en la terminal (modo lectura):**
-  ```bash
-  less include/linux/sched.h
-  ```
+Bash
+gcc mini_shell.c -o mini_shell
+Asegúrate de que no arroje errores de compilación y que se haya generado el binario mini_shell.
 
-Dentro del archivo, utilice la función de búsqueda (`Ctrl + F`) o la búsqueda de símbolos para encontrar el inicio de la definición de la estructura principal:
+Paso 4: Ejecutar y verificar el comportamiento
+Corre el programa en tu terminal de Fedora para observar el flujo de ejecución en tiempo real:
 
-* **`struct task_struct {`**
+Bash
+./mini_shell
+Qué debes observar en la salida:
 
-## 4. Navegación Estructural en el Editor
+El Padre imprime su mensaje inicial y muestra su PID.
 
-1. Abra la carpeta del kernel o el archivo específico en su editor de código (por ejemplo, VS Code).
-2. Utilice la función IntelliSense (**F12**) o la búsqueda de símbolos (`Ctrl + P` y escriba `@`) para encontrar la definición de la estructura principal:
-   * **`struct task_struct`**
+El Padre crea al Hijo mediante fork().
 
----
+El Hijo toma el control, imprime su PID y ejecuta el comando ls -l (listando los archivos del directorio actual).
 
-## 5. Análisis (Entregable)
+El Padre, gracias a waitpid(), se bloquea ordenadamente hasta que el hijo finaliza, luego lee el código de salida y se cierra de forma limpia sin dejar procesos huérfanos ni zombies.
 
-Identifique y extraiga **10 subcampos** de la estructura `struct task_struct`. Organice la información en la siguiente tabla de su informe:
+Paso 5: Puntos clave de validación (Checklist de éxito)
+Para asegurar que dominas la práctica en Fedora, ten en cuenta las siguientes precauciones basadas en el material:
 
-| Nombre del Campo | Tipo de Datos C    | Subsistema Asociado | Propósito / Función               |
-| :---             | :---               | :---                | :---                              |
-| *Ej: pid*        | *pid_t*            | *Process Core*      | *Identificador único del proceso* |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
+Validación de fork(): Nunca omitas verificar si el valor retornado por fork() es menor a 0.
 
-*Sugerencia de subsistemas a buscar:* `mm` (memoria), `fs` (sistema de archivos), `signal` (señales), `real_parent` (vínculos familiares de procesos), `cred` (credenciales y seguridad).
+Uso de _exit() en el hijo: Si execvp falla, usar _exit() en lugar de exit() evita duplicar la limpieza de búferes de memoria heredados del padre.
 
----
-
-## 6. Verificación Empírica y Entrega
-
-1. Inspeccione el estado del proceso actual en su máquina local ejecutando en la terminal:
-   ```bash
-   cat /proc/self/status
-   ```
-2. Realice un mapeo comparativo asociando al menos **4 de las salidas** visualizadas en la terminal con los campos C correspondientes que analizó dentro de `task_struct`.
-3. Guarde el archivo, registre sus cambios en el historial de Git y suba el trabajo final al repositorio remoto:
-   ```bash
-   git add .
-   git commit -m "Análisis de task_struct y verificación empírica completada"
-   git push origin main
-   ```
-
-
+Limpieza obligatoria: El uso de waitpid() garantiza que el kernel libere la entrada de la tabla de procesos del hijo, evitando el temido estado Zombie (Z).

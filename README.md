@@ -1,9 +1,9 @@
-#IUPSM Hilos y Pthreads SO II
+# IUPSM Hilos y Pthreads SO II
 
 Esta es una prueba evaluable que sigue pasos numerados para experimentar y comprender la utilidad y el potencial de una máquina virtual (VM).
 Integrantes
 
-#Integrantes
+# Integrantes
 Jesus Ernesto Ramirez Ruiz
 
 Anthony Alvarado
@@ -18,7 +18,7 @@ Ubuntu/ Debian / Linux Mint = sudo apt update
 Arch Linux / Manjaro        = sudo pacman -Syu
 ```
 
-#Instrucciones para realizar la misión de Laboratorio
+# Instrucciones para realizar la misión de Laboratorio
 
 **Paso 1:** Preparar el entorno de trabajo en Fedora
 Antes de escribir código, asegúrate de tener instaladas las herramientas esenciales de compilación (gcc), la biblioteca de hilos (pthreads) y el editor de texto o entorno que prefieras (nano, vim o code).

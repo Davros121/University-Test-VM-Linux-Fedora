@@ -1,129 +1,169 @@
-# University-Test-VM-Linux-Fedora
-This is a graded test following numbered steps to experiment and comprehend the usefullness and potential of a Virtual Machine (VM)
+#IUPSM Hilos y Pthreads SO II#
 
-# Integrantes
-Jesus Ernesto Ramirez Ruiz 
+Esta es una prueba evaluable que sigue pasos numerados para experimentar y comprender la utilidad y el potencial de una máquina virtual (VM).
+Integrantes
+
+Jesus Ernesto Ramirez Ruiz
+
 Anthony Alvarado
 
-#Instrucciones para realizar la misión de Laboratorio
+El siguiente experimento/actividad fue realizado en una maquina virtual empleado el S.O. Linux Fedora por medio de Oracle VirtualBox.
+Cabe destacar que algunos "Comandos" difieren dependiendo de que "distro" (Distribución) uses. Un ejemplo de comandos simples de diferentes distros son:
 
-#1. Instalar Fuente
-"sudo apt installl linux-source"
+```bash
+Ubuntu/ Debian / Linux Mint = sudo apt update 
+```
+```bash
+Arch Linux / Manjaro        = sudo pacman -Syu
+```
 
-#2. Extraer y localizar
-"cd /usr /src && sudo tar xf linux-source-*.tar.vz2"
+#Instrucciones para realizar la misión de Laboratorio#
 
-#3. Navegación Estructural
-Abrir en VSCode. Usar Intellisense (F12) o búsqueda de símbolos para encontrar la definición de 
-"struct task_struct"
+**Paso 1:** Preparar el entorno de trabajo en Fedora
+Antes de escribir código, asegúrate de tener instaladas las herramientas esenciales de compilación (gcc), la biblioteca de hilos (pthreads) y el editor de texto o entorno que prefieras (nano, vim o code).
 
-#4. Análisis 
-Extraer 10 subcampos en una tabal detallando: nombre, tipo C. subsistema y proposito
-Ejm. mm, fs, signal, real_parent, cred
+1. Abre tu terminal en Fedora.
 
-#5. Veruficacion Empirica
-Ejecutar "cat /proc/self/status" en su maquina local. Mapear 4 salidas con el codigo C encontrado
-Realizar un Push al repositorio de Github de su equipo
+2. Actualiza los repositorios e instala las herramientas de desarrollo básicas (si aún no las tienes):
 
-Los pasos anteriores son esctructurados para un Sistema de Linux Denby, en mi caso use un sistema Linux Fedora, para facilitar su practica los pasos son los siguientes:
+```bash
+sudo dnf update -y
+sudo dnf install gcc make glibc-devel -y
+```
 
-# Guía de Trabajo: Análisis del Código Fuente de Linux (Fedora)
+3. Crea un directorio de trabajo para organizar tu práctica y entra en él:
+```bash
+mkdir suma-paralela
+cd suma-paralela
+```
 
-Este documento detalla los pasos secuenciales para clonar el repositorio, preparar el entorno de desarrollo en Fedora, localizar las estructuras esenciales del kernel de Linux y realizar la verificación empírica.
+**Paso 2:** Crear el archivo fuente de la Suma Paralela
+Vamos a programar un arreglo masivo de 100 millones de elementos dividido en 4 partes (chunks), asignando cada bloque a un hilo independiente mediante una estructura de rangos, y almacenando los resultados de forma aislada en un arreglo de sumas parciales para evitar condiciones de carrera.
 
----
+1. Crea y abre el archivo con tu editor favorito:
 
-## 1. Migración de GitHub a Carpeta Personal (Clonación)
+```bash
+nano suma_paralela.c
+```
 
-Para comenzar a trabajar, primero se debe traer el repositorio digital de GitHub a su máquina local dentro de su espacio de trabajo personal.
+2. Escribe el siguiente código base en C. Este programa simula el procesamiento concurrente mediante hilos POSIX:
 
-1. Abra la terminal de Linux Fedora.
-2. Descargue el repositorio clonándolo con su **Token de Acceso Personal (PAT)** para autenticar la sesión de forma segura:
-   ```bash
-   git clone https://Nombre_de_Usuario:TU_TOKEN_AQUÍ@github.com
-   ```
-3. Acceda a la carpeta del proyecto recién creada:
-   ```bash
-   cd University-Test-VM-Linux-Fedora
-   ```
+```bash
 
----
-**Como generas un Token de Acceso personal?**
-Dentro de Github ir a tu cuenta y proceder con los siguientes pasos: Usuario/ Opciones/ Opciones de Desarrollador/ Tokens de Acceso Personal/ Tokens [Clasico]/ Habilitar primera opcion REPO. Hecho esto tendras habilitado un codigo temporal que facilita el acceso para la migracion del repositorio
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <sys/time.h>
 
-## 2. Instalar Código Fuente y Cabeceras del Kernel
+#define MAX_ELEMENTS 100000000
+#define NUM_THREADS 4
 
-A diferencia de otras distribuciones, Fedora organiza las cabeceras directamente en el directorio de desarrollo del sistema sin necesidad de realizar una extracción manual de un archivo comprimido.
+// Arreglo global de datos y arreglo de resultados parciales seguros
+long long int arreglo[MAX_ELEMENTS];
+long long int suma_parcial[NUM_THREADS];
 
-1. Diríjase a la ruta del kernel dinámico de su máquina:
-   ```bash
-   cd /usr/src/kernels/$(uname -r)/
-   ```
-2. El archivo objetivo que debe examinar se encuentra en la siguiente ruta relativa:
-   * `include/linux/sched.h`
+// Estructura para definir los límites que procesará cada hilo
+typedef struct {
+    int id;
+    long long int inicio;
+    long long int fin;
+} Rango;
 
----
+// Función ejecutada por cada hilo de forma paralela
+void *sumar_segmento(void *arg) {
+    Rango *r = (Rango *)arg;
+    long long int local_suma = 0;
 
+    // Cada hilo procesa exclusivamente su rango asignado
+    for (long long int i = r->inicio; i < r->fin; i++) {
+        local_suma += arreglo[i];
+    }
 
-## 3. Localizar Archivos de Cabecera
+    // Guarda el resultado en su índice exclusivo (Aislamiento Seguro)
+    suma_parcial[r->id] = local_suma;
+    pthread_exit(NULL);
+}
 
-na vez posicionado dentro del directorio del kernel en la terminal, abra el archivo de cabecera utilizando su editor de código preferido:
+int main() {
+    pthread_t hilos[NUM_THREADS];
+    Rango rangos[NUM_THREADS];
+    struct timeval t_ini, t_fin;
+    long long int suma_total = 0;
 
-* **Para abrir en VS Code:**
-  ```bash
-  code include/linux/sched.h
-  ```
-* **Para visualizar directamente en la terminal (modo lectura):**
-  ```bash
-  less include/linux/sched.h
-  ```
+    printf("Inicializando arreglo de %d millones de elementos...\n", MAX_ELEMENTS / 1000000);
+    for (long long int i = 0; i < MAX_ELEMENTS; i++) {
+        arreglo[i] = 1; // Llenamos con 1 para verificar que la suma sea exacta
+    }
 
-Dentro del archivo, utilice la función de búsqueda (`Ctrl + F`) o la búsqueda de símbolos para encontrar el inicio de la definición de la estructura principal:
+    long long int chunk_size = MAX_ELEMENTS / NUM_THREADS;
 
-* **`struct task_struct {`**
+    // Inicio de medición de tiempo
+    gettimeofday(&t_ini, NULL);
 
-## 4. Navegación Estructural en el Editor
+    // 1. Crear los 4 hilos en paralelo
+    for (int i = 0; i < NUM_THREADS; i++) {
+        rangos[i].id = i;
+        rangos[i].inicio = i * chunk_size;
+        rangos[i].fin = (i == NUM_THREADS - 1) ? MAX_ELEMENTS : (i + 1) * chunk_size;
+        
+        pthread_create(&hilos[i], NULL, sumar_segmento, (void *)&rangos[i]);
+    }
 
-1. Abra la carpeta del kernel o el archivo específico en su editor de código (por ejemplo, VS Code).
-2. Utilice la función IntelliSense (**F12**) o la búsqueda de símbolos (`Ctrl + P` y escriba `@`) para encontrar la definición de la estructura principal:
-   * **`struct task_struct`**
+    // 2. Sincronizar: esperar a que todos los hilos terminen
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(hilos[i], NULL);
+    }
 
----
+    // 3. Consolidar las sumas parciales en el hilo principal
+    for (int i = 0; i < NUM_THREADS; i++) {
+        suma_total += suma_parcial[i];
+    }
 
-## 5. Análisis (Entregable)
+    // Fin de medición de tiempo
+    gettimeofday(&t_fin, NULL);
 
-Identifique y extraiga **10 subcampos** de la estructura `struct task_struct`. Organice la información en la siguiente tabla de su informe:
+    double tiempo_ejecucion = (t_fin.tv_sec - t_ini.tv_sec) + (t_fin.tv_usec - t_ini.tv_usec) / 1e6;
 
-| Nombre del Campo | Tipo de Datos C    | Subsistema Asociado | Propósito / Función               |
-| :---             | :---               | :---                | :---                              |
-| *Ej: pid*        | *pid_t*            | *Process Core*      | *Identificador único del proceso* |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
+    // Resultados
+    printf("--- RESULTADOS DEL LABORATORIO ---\n");
+    printf("Suma Total calculada: %lld\n", suma_total);
+    printf("Tiempo de ejecución paralelo (%d hilos): %.6f segundos\n", NUM_THREADS, tiempo_ejecucion);
 
-*Sugerencia de subsistemas a buscar:* `mm` (memoria), `fs` (sistema de archivos), `signal` (señales), `real_parent` (vínculos familiares de procesos), `cred` (credenciales y seguridad).
+    return 0;
+}
+```
 
----
+3. Guarda los cambios y sal del editor (en nano, presiona Ctrl+O, Enter para guardar, y Ctrl+X para salir).
 
-## 6. Verificación Empírica y Entrega
+**Paso 3:** Compilar el programa
+Verifica que el código cumpla con la sintaxis de C y genera el ejecutable utilizando gcc enlazando la biblioteca de hilos.
 
-1. Inspeccione el estado del proceso actual en su máquina local ejecutando en la terminal:
-   ```bash
-   cat /proc/self/status
-   ```
-2. Realice un mapeo comparativo asociando al menos **4 de las salidas** visualizadas en la terminal con los campos C correspondientes que analizó dentro de `task_struct`.
-3. Guarde el archivo, registre sus cambios en el historial de Git y suba el trabajo final al repositorio remoto:
-   ```bash
-   git add .
-   git commit -m "Análisis de task_struct y verificación empírica completada"
-   git push origin main
-   ```
+1. Ejecuta el comando de compilación:
 
+```bash
+gcc suma_paralela.c -o suma_paralela -pthread
+```
 
+2. Asegúrate de que no arroje errores de compilación y que se haya generado el binario suma_paralela.
+
+**Paso 4:** Ejecutar y verificar el comportamiento
+Corre el programa en tu terminal de Fedora para observar el flujo de ejecución en tiempo real:
+
+```bash
+./suma_paralela
+```
+
+Procesos que podrás ver en la salida:
+
+El programa inicializa el arreglo masivo de 100 millones de elementos de manera eficiente.
+
+Los 4 hilos distribuyen la carga de trabajo y procesan los datos de forma simultánea en paralelo.
+
+El hilo principal utiliza pthread_join() para sincronizar y esperar a que todos los hilos terminen antes de consolidar la suma total exacta y el tiempo de ejecución en segundos.
+
+**Paso 5:** Puntos clave de validación (Checklist de éxito)
+Para asegurar una compresion y dominio del contenido en este experimento, es necesario tomar en cuenta las siguientes precauciones para evitar bugs o problemas:
+
+**Aislamiento de Memoria:** Notarás que cada hilo lee su propio segmento del arreglo global pero escribe en casillas independientes (suma_parcial[i]), lo que previene por completo las condiciones de carrera (Race Conditions).
+
+**Sincronización Correcta:** El uso obligatorio de pthread_join() garantiza que el hilo principal no imprima resultados parciales o basura antes de que los hilos hijos terminen sus operaciones de cómputo.

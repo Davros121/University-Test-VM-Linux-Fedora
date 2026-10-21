@@ -33,8 +33,8 @@ sudo dnf install gcc make glibc-devel -y
 
 3. Crea un directorio de trabajo para organizar tu práctica y entra en él:
 ```bash
-mkdir suma-paralela
-cd suma-paralela
+mkdir suma_paralela
+cd suma_paralela
 ```
 
 **Paso 2:** Crear el archivo fuente de la Suma Paralela

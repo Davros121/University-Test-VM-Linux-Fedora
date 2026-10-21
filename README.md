@@ -1,8 +1,8 @@
 # IUPSM For-Exec-Wait SO II
-This is a graded test following numbered steps to experiment and comprehend the usefullness and potential of a Virtual Machine (VM)
-
+Esta es una prueba evaluable que sigue pasos numerados para experimentar y comprender la utilidad y el potencial de una máquina virtual (VM).
 # Integrantes
 Jesus Ernesto Ramirez Ruiz 
+
 Anthony Alvarado
 
 El siguiente experimento/actividad fue realizado en una maquina virtual empleado el S.O. Linux Fedora por medio de Oracle VirtualBox.

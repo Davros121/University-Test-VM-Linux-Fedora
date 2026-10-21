@@ -31,8 +31,8 @@ sudo dnf install gcc make glibc-devel -y
 
 3. Crea un directorio de trabajo para organizar tu práctica y entra en él:
 ```bash
-mkdir seccion-critica
-cd seccion-critica
+mkdir seccion_critica
+cd seccion_critica
 ```
 
 **Paso 2:** Crear el archivo fuente de la Condición de Carrera (race_counter.c)
@@ -105,6 +105,11 @@ Para evidenciar formalmente la colisión en tiempo de ejecución, utilizaremos l
 ```bash
 gcc -Wall -pthread -fsanitize=thread race_counter.c -o race_counter
 ```
+En caso de generar problema, una posible solucion es instalar la libreria 
+```bash
+sudo dnf install libtsan -y
+```
+Puesto que aveces sucede que no viene incluida por defecto al instalar junto a ***gcc*** (Paso 1)
 
 1. Asegúrate de que no arroje errores de compilación y que se haya generado el binario race_counter.
 

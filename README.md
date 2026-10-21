@@ -1,129 +1,128 @@
-# University-Test-VM-Linux-Fedora
-This is a graded test following numbered steps to experiment and comprehend the usefullness and potential of a Virtual Machine (VM)
+# Sincronizacion y Concurrencia SO2-U1-7
+Esta es una prueba evaluable que sigue pasos numerados para experimentar y comprender la utilidad y el potencial de una máquina virtual (VM).
 
 # Integrantes
 Jesus Ernesto Ramirez Ruiz 
 Anthony Alvarado
 
-#Instrucciones para realizar la misión de Laboratorio
+# Prueba de Laboratorio
+El siguiente experimento/actividad fue realizado en una maquina virtual empleado el S.O. Linux Fedora por medio de Oracle VirtualBox.
+Cabe destacar que algunos "Comandos" difieren dependiendo de que "distro" (Distribución) uses. Un ejemplo de comandos simples de diferentes distros son:
+```bash
+Ubuntu/ Debian / Linux Mint = sudo apt update 
+```
+```bash
+Arch Linux / Manjaro        = sudo pacman -Syu
+```
 
-#1. Instalar Fuente
-"sudo apt installl linux-source"
+**Instrucciones para realizar la misión de Laboratorio**
 
-#2. Extraer y localizar
-"cd /usr /src && sudo tar xf linux-source-*.tar.vz2"
+**Paso 1:** Preparar el entorno de trabajo en Fedora
+Antes de escribir código, asegúrate de tener instaladas las herramientas esenciales de compilación (gcc), la biblioteca de hilos (pthreads) y el editor de texto o entorno que prefieras (nano, vim o code).
 
-#3. Navegación Estructural
-Abrir en VSCode. Usar Intellisense (F12) o búsqueda de símbolos para encontrar la definición de 
-"struct task_struct"
+1. Abre tu terminal en Fedora.
 
-#4. Análisis 
-Extraer 10 subcampos en una tabal detallando: nombre, tipo C. subsistema y proposito
-Ejm. mm, fs, signal, real_parent, cred
+2. Actualiza los repositorios e instala las herramientas de desarrollo básicas (si aún no las tienes):
 
-#5. Veruficacion Empirica
-Ejecutar "cat /proc/self/status" en su maquina local. Mapear 4 salidas con el codigo C encontrado
-Realizar un Push al repositorio de Github de su equipo
+```bash
+sudo dnf update -y
+sudo dnf install gcc make glibc-devel -y
+```
 
-Los pasos anteriores son esctructurados para un Sistema de Linux Denby, en mi caso use un sistema Linux Fedora, para facilitar su practica los pasos son los siguientes:
+3. Crea un directorio de trabajo para organizar tu práctica y entra en él:
+```bash
+mkdir seccion-critica
+cd seccion-critica
+```
 
-# Guía de Trabajo: Análisis del Código Fuente de Linux (Fedora)
+**Paso 2:** Crear el archivo fuente de la Condición de Carrera (race_counter.c)
+SE requiere programar el escenario del problema de la sección crítica plasmado en el archivo (SO2-U1-7 Pag. 4). Cuatro hilos intentarán incrementar una variable global compartida un millón de veces cada uno, demostrando por qué una operación aparentemente simple como contador++ no es atómica a nivel de hardware y genera un resultado no determinista.
 
-Este documento detalla los pasos secuenciales para clonar el repositorio, preparar el entorno de desarrollo en Fedora, localizar las estructuras esenciales del kernel de Linux y realizar la verificación empírica.
+1. Crea y abre el archivo con tu editor favorito:
 
----
+```bash
+nano race_counter.c
+```
 
-## 1. Migración de GitHub a Carpeta Personal (Clonación)
+2. Escribe el siguiente código base en C:
 
-Para comenzar a trabajar, primero se debe traer el repositorio digital de GitHub a su máquina local dentro de su espacio de trabajo personal.
+```bash
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
 
-1. Abra la terminal de Linux Fedora.
-2. Descargue el repositorio clonándolo con su **Token de Acceso Personal (PAT)** para autenticar la sesión de forma segura:
-   ```bash
-   git clone https://Nombre_de_Usuario:TU_TOKEN_AQUÍ@github.com
-   ```
-3. Acceda a la carpeta del proyecto recién creada:
-   ```bash
-   cd University-Test-VM-Linux-Fedora
-   ```
+#define NUM_THREADS 4
+#define ITER 1000000
 
----
-**Como generas un Token de Acceso personal?**
-Dentro de Github ir a tu cuenta y proceder con los siguientes pasos: Usuario/ Opciones/ Opciones de Desarrollador/ Tokens de Acceso Personal/ Tokens [Clasico]/ Habilitar primera opcion REPO. Hecho esto tendras habilitado un codigo temporal que facilita el acceso para la migracion del repositorio
+// Variable global compartida (Sección Crítica)
+static long contador = 0;
 
-## 2. Instalar Código Fuente y Cabeceras del Kernel
+// Función ejecutada por cada hilo
+void *incrementar(void *arg) {
+    for (long i = 0; i < ITER; i++) {
+        contador++; /* Operación no atómica susceptible a condición de carrera */
+    }
+    pthread_exit(NULL);
+}
 
-A diferencia de otras distribuciones, Fedora organiza las cabeceras directamente en el directorio de desarrollo del sistema sin necesidad de realizar una extracción manual de un archivo comprimido.
+int main() {
+    pthread_t hilos[NUM_THREADS];
+    long esperado = (long)NUM_THREADS * ITER;
 
-1. Diríjase a la ruta del kernel dinámico de su máquina:
-   ```bash
-   cd /usr/src/kernels/$(uname -r)/
-   ```
-2. El archivo objetivo que debe examinar se encuentra en la siguiente ruta relativa:
-   * `include/linux/sched.h`
+    printf("Iniciando prueba con %d hilos, %d iteraciones cada uno...\n", NUM_THREADS, ITER);
+    printf("Valor esperado exacto: %ld\n", esperado);
 
----
+    // 1. Crear los hilos concurrentes
+    for (int i = 0; i < NUM_THREADS; i++) {
+        if (pthread_create(&hilos[i], NULL, incrementar, NULL) != 0) {
+            perror("Error al crear el hilo");
+            exit(EXIT_FAILURE);
+        }
+    }
 
+    // 2. Esperar a que todos los hilos terminen
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(hilos[i], NULL);
+    }
 
-## 3. Localizar Archivos de Cabecera
+    // 3. Mostrar resultados
+    printf("--- RESULTADOS DEL LABORATORIO ---\n");
+    printf("Valor Esperado: %ld\n", esperado);
+    printf("Valor Obtenido: %ld\n", contador);
+    printf("Diferencia (Perdidos): %ld\n", esperado - contador);
 
-na vez posicionado dentro del directorio del kernel en la terminal, abra el archivo de cabecera utilizando su editor de código preferido:
+    return 0;
+}
+```
 
-* **Para abrir en VS Code:**
-  ```bash
-  code include/linux/sched.h
-  ```
-* **Para visualizar directamente en la terminal (modo lectura):**
-  ```bash
-  less include/linux/sched.h
-  ```
+3. Guarda los cambios y sal del editor (en nano, presiona Ctrl+O, Enter para guardar, y Ctrl+X para salir).
 
-Dentro del archivo, utilice la función de búsqueda (`Ctrl + F`) o la búsqueda de símbolos para encontrar el inicio de la definición de la estructura principal:
+**Paso 3:** Compilar el programa y usar ThreadSanitizer (TSan)
+Para evidenciar formalmente la colisión en tiempo de ejecución, utilizaremos la herramienta de diagnóstico de GCC, ThreadSanitizer (-fsanitize=thread), junto con la biblioteca de hilos (-pthread).
 
-* **`struct task_struct {`**
+    Ejecuta el comando de compilación con TSan:
 
-## 4. Navegación Estructural en el Editor
+```bash
+gcc -Wall -pthread -fsanitize=thread race_counter.c -o race_counter
+```
 
-1. Abra la carpeta del kernel o el archivo específico en su editor de código (por ejemplo, VS Code).
-2. Utilice la función IntelliSense (**F12**) o la búsqueda de símbolos (`Ctrl + P` y escriba `@`) para encontrar la definición de la estructura principal:
-   * **`struct task_struct`**
+1. Asegúrate de que no arroje errores de compilación y que se haya generado el binario race_counter.
 
----
+**Paso 4:** Ejecutar y verificar el comportamiento
+Corre el programa compilado en tu terminal de Fedora para observar el error numérico y el reporte del analizador:
+```bash
+./race_counter
+```
 
-## 5. Análisis (Entregable)
+***Procesos y comportamientos que podrás ver en la salida:***
 
-Identifique y extraiga **10 subcampos** de la estructura `struct task_struct`. Organice la información en la siguiente tabla de su informe:
+El programa imprime el valor esperado (4,000,000) frente al valor obtenido real, el cual será menor debido a que múltiples hilos leen, incrementan y escriben simultáneamente la misma posición de memoria sin exclusión mutua.
 
-| Nombre del Campo | Tipo de Datos C    | Subsistema Asociado | Propósito / Función               |
-| :---             | :---               | :---                | :---                              |
-| *Ej: pid*        | *pid_t*            | *Process Core*      | *Identificador único del proceso* |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
+**ThreadSanitizer (TSan)** emitirá una alerta roja detallando una Data Race (Condición de Carrera) en la variable contador, indicando exactamente dónde ocurre la colisión de lecturas y escrituras concurrentes.
 
-*Sugerencia de subsistemas a buscar:* `mm` (memoria), `fs` (sistema de archivos), `signal` (señales), `real_parent` (vínculos familiares de procesos), `cred` (credenciales y seguridad).
+**Paso 5:** Puntos clave de validación (Checklist de éxito)
+Para asegurar una compresión y dominio del contenido en este experimento, es necesario tomar en cuenta los siguientes conceptos teóricos:
 
----
+**La Falacia de la Atomicidad:** Una instrucción en C como contador++ se traduce en lenguaje de máquina en múltiples pasos desacoplados (LOAD del registro, INC y STORE de vuelta), permitiendo que el planificador del sistema operativo mezcle las instrucciones de los hilos de manera impredecible.
 
-## 6. Verificación Empírica y Entrega
-
-1. Inspeccione el estado del proceso actual en su máquina local ejecutando en la terminal:
-   ```bash
-   cat /proc/self/status
-   ```
-2. Realice un mapeo comparativo asociando al menos **4 de las salidas** visualizadas en la terminal con los campos C correspondientes que analizó dentro de `task_struct`.
-3. Guarde el archivo, registre sus cambios en el historial de Git y suba el trabajo final al repositorio remoto:
-   ```bash
-   git add .
-   git commit -m "Análisis de task_struct y verificación empírica completada"
-   git push origin main
-   ```
-
-
+**La Necesidad de Sincronización:** Demostrar este fallo justifica la implementación de mecanismos de Exclusión Mutua (como Semáforos y Mutex basados en instrucciones atómicas del hardware) para proteger la Sección Crítica.

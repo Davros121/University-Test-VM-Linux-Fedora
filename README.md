@@ -24,9 +24,15 @@ Antes de escribir código, asegúrate de tener instaladas las herramientas esenc
 
 ```bash
 sudo dnf update -y
-sudo dnf groupinstall "Development Tools" -y
-Crea un directorio de trabajo para organizar tu práctica y entra en él:
+sudo dnf group install "Development Tools" -y
 ```
+O
+```bash
+sudo dnf install gcc make glibc-devel -y
+```
+
+Crea un directorio de trabajo para organizar tu práctica y entra en él:
+
 ```bash
 mkdir mini-shell-practica
 cd mini-shell-practica

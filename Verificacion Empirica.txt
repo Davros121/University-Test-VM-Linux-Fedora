@@ -1,0 +1,50 @@
+RESULTADOS DE LA PRÁCTICA DE LABORATORIO: DIAGNÓSTICO DE PROCESOS (SO2-U1-4)
+Ejecución real y telemetría observada en la terminal de Linux Fedora:
+
+liveuser@localhost-live:~/practica_proc_u1_4$ python3 procinfo.py $$
+=== REPORTE FORENSE /PROC PARA PID: 8861 ===
+  Name:	bash
+  State:	S (sleeping)
+  Tgid:	8861
+  Pid:	8861
+  PPid:	8820
+  VmRSS:	5888 kB
+  [+] Estado extraído correctamente desde /status
+  [+] Descriptores de archivos activos (/fd): 4
+  [+] Argumentos de nacimiento (/cmdline): /usr/bin/bash
+
+B. Mapeo comparativo con el código C (struct task_struct)
+• [Salida 1] Nombre del Proceso
+	• Dato Real Terminal: Name: bash
+	• Código C Asociado: comm (char[TASK_COMM_LEN])
+	• Justificación: Muestra el nombre del programa ejecutable en ejecución. El kernel lee este dato directamente desde el arreglo de caracteres comm dentro de la estructura de control del proceso.
+
+• [Salida 2] Estado del Proceso
+	• Dato Real Terminal: State: S (sleeping)
+	• Código C Asociado: __state (unsigned int) / state
+	• Justificación: Indica que el proceso bash se encuentra en estado de sueño interrumpible (TASK_INTERRUPTIBLE), a la espera de un evento o entrada de usuario desde la terminal (tecla o comando).
+
+• [Salida 3] Identificador de Proceso (PID) y Grupo de Hilos (TGID)
+	• Dato Real Terminal: Pid: 8861 | Tgid: 8861
+	• Código C Asociado: pid (pid_t) / tgid (pid_t)
+	• Justificación: Es el número de identificación único global asignado al proceso principal por el kernel de Fedora. Se almacena directamente en los miembros pid y tgid de la macro-estructura del proceso.
+
+• [Salida 4] Identificador del Proceso Padre (PPid)
+	• Dato Real Terminal: PPid: 8820
+	• Código C Asociado: parent / real_parent (struct task_struct *)
+	• Justificación: Apunta al puntero de la estructura del proceso padre (PID 8820, correspondiente al emulador de terminal o multiplexor) que ejecutó el fork() y execve() para invocar el shell.
+
+• [Salida 5] Memoria Física Residente (VmRSS)
+	• Dato Real Terminal: VmRSS: 5888 kB
+	• Código C Asociado: mm_struct (struct mm_struct -> rss_stat)
+	• Justificación: Muestra la cantidad real de páginas físicas ocupando memoria RAM en este momento (Resident Set Size). El kernel mapea este dato desde la estructura de gestión de memoria virtual del proceso.
+
+• [Salida 6] Conteo de Descriptores de Archivos (/fd)
+	• Dato Real Terminal: Descriptores de archivos activos (/fd): 4
+	• Código C Asociado: files (struct files_struct *files)
+	• Justificación: Muestra la cantidad de descriptores de archivos abiertos (como stdin, stdout, stderr y enlaces a la terminal /dev/pts/). Se consulta inspeccionando la tabla de descriptores apuntada por files_struct.
+
+• [Salida 7] Argumentos de Nacimiento (/cmdline)
+	• Dato Real Terminal: Argumentos de nacimiento (/cmdline): /usr/bin/bash
+	• Código C Asociado: mm_struct (arg_start, arg_end)
+	• Justificación: Muestra la cadena estática congelada con los argumentos de la línea de comandos pasados en el momento exacto de la llamada a sistema execve().

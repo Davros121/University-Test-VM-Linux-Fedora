@@ -1,129 +1,140 @@
-# University-Test-VM-Linux-Fedora
-This is a graded test following numbered steps to experiment and comprehend the usefullness and potential of a Virtual Machine (VM)
+# Diagnostico de Procesos SO2-U1-3
+Esta es una prueba evaluable que sigue pasos numerados para experimentar y comprender la utilidad y el potencial de una máquina virtual (VM).
 
 # Integrantes
 Jesus Ernesto Ramirez Ruiz 
 Anthony Alvarado
 
-#Instrucciones para realizar la misión de Laboratorio
+# Prueba de Laboratorio
+El siguiente experimento/actividad fue realizado en una maquina virtual empleado el S.O. Linux Fedora por medio de Oracle VirtualBox.
+Cabe destacar que algunos "Comandos" difieren dependiendo de que "distro" (Distribución) uses. Un ejemplo de comandos simples de diferentes distros son:
+```bash
+Ubuntu/ Debian / Linux Mint = sudo apt update 
+```
+```bash
+Arch Linux / Manjaro        = sudo pacman -Syu
+```
 
-#1. Instalar Fuente
-"sudo apt installl linux-source"
+**Instrucciones para realizar la misión de Laboratorio**
 
-#2. Extraer y localizar
-"cd /usr /src && sudo tar xf linux-source-*.tar.vz2"
+**Paso 1:** Preparar el entorno de trabajo en Fedora
+Antes de escribir código o manipular el kernel, asegúrate de tener instaladas las herramientas esenciales de compilación (gcc), utilidades de observación de procesos y encabezados del sistema.
 
-#3. Navegación Estructural
-Abrir en VSCode. Usar Intellisense (F12) o búsqueda de símbolos para encontrar la definición de 
-"struct task_struct"
+1. Abre tu terminal en Fedora.
 
-#4. Análisis 
-Extraer 10 subcampos en una tabal detallando: nombre, tipo C. subsistema y proposito
-Ejm. mm, fs, signal, real_parent, cred
+2. Actualiza los repositorios e instala las herramientas esenciales (si aún no las tienes):
 
-#5. Veruficacion Empirica
-Ejecutar "cat /proc/self/status" en su maquina local. Mapear 4 salidas con el codigo C encontrado
-Realizar un Push al repositorio de Github de su equipo
+```bash
+sudo dnf update -y
+sudo dnf install gcc make procps-ng htop -y
+```
 
-Los pasos anteriores son esctructurados para un Sistema de Linux Denby, en mi caso use un sistema Linux Fedora, para facilitar su practica los pasos son los siguientes:
+3. Crea un directorio de trabajo para organizar tu práctica y entra en él:
+```bash
+mkdir diagnostico_procesos
+cd diagnostico_procesos
+```
 
-# Guía de Trabajo: Análisis del Código Fuente de Linux (Fedora)
+**Paso 2:** Crear el archivo fuente del Proceso Zombie (zombie_maker.c)
+Se requiere programar el escenario del Laboratorio Forense 01 plasmado en el material de estudio. Un proceso hijo terminará inmediatamente, pero el proceso padre no invocará la llamada a sistema `wait()`, obligando al kernel a mantener la entrada en la tabla de procesos en estado Zombie (Z).
 
-Este documento detalla los pasos secuenciales para clonar el repositorio, preparar el entorno de desarrollo en Fedora, localizar las estructuras esenciales del kernel de Linux y realizar la verificación empírica.
+1. Crea y abre el archivo con tu editor favorito:
 
----
+```bash
+nano zombie_maker.c
+```
 
-## 1. Migración de GitHub a Carpeta Personal (Clonación)
+2. Escribe el siguiente código base en C:
 
-Para comenzar a trabajar, primero se debe traer el repositorio digital de GitHub a su máquina local dentro de su espacio de trabajo personal.
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
 
-1. Abra la terminal de Linux Fedora.
-2. Descargue el repositorio clonándolo con su **Token de Acceso Personal (PAT)** para autenticar la sesión de forma segura:
-   ```bash
-   git clone https://Nombre_de_Usuario:TU_TOKEN_AQUÍ@github.com
-   ```
-3. Acceda a la carpeta del proyecto recién creada:
-   ```bash
-   cd University-Test-VM-Linux-Fedora
-   ```
+int main() {
+    printf("=== LABORATORIO FORENSE 01: CREANDO UN ZOMBIE ===\n");
+    
+    pid_t pid = fork();
 
----
-**Como generas un Token de Acceso personal?**
-Dentro de Github ir a tu cuenta y proceder con los siguientes pasos: Usuario/ Opciones/ Opciones de Desarrollador/ Tokens de Acceso Personal/ Tokens [Clasico]/ Habilitar primera opcion REPO. Hecho esto tendras habilitado un codigo temporal que facilita el acceso para la migracion del repositorio
+    if (pid < 0) {
+        perror("Error al ejecutar fork");
+        exit(EXIT_FAILURE);
+    }
 
-## 2. Instalar Código Fuente y Cabeceras del Kernel
+    if (pid == 0) {
+        // Código del proceso Hijo
+        printf("[HIJO] PID: %d -> Terminando inmediatamente con exit(0)...\n", getpid());
+        _exit(0); // El hijo muere pero retiene su entrada hasta que el padre haga wait()
+    } else {
+        // Código del proceso Padre
+        printf("[PADRE] PID: %d -> Hijo creado con PID: %d\n", getpid(), pid);
+        printf("[PADRE] Durmiendo por 100 segundos sin invocar wait()...\n");
+        printf("[INSTRUCCION] Abre otra terminal y verifica el estado con:\n");
+        printf("              cat /proc/%d/status | grep State\n\n", pid);
+        
+        sleep(100); // Mantiene al padre vivo sin recolectar los restos del hijo
+    }
 
-A diferencia de otras distribuciones, Fedora organiza las cabeceras directamente en el directorio de desarrollo del sistema sin necesidad de realizar una extracción manual de un archivo comprimido.
+    return 0;
+}
+```
 
-1. Diríjase a la ruta del kernel dinámico de su máquina:
-   ```bash
-   cd /usr/src/kernels/$(uname -r)/
-   ```
-2. El archivo objetivo que debe examinar se encuentra en la siguiente ruta relativa:
-   * `include/linux/sched.h`
+3. Guarda los cambios y sal del editor (en nano, presiona Ctrl+O, Enter para guardar, y Ctrl+X para salir).
 
----
+**Paso 3:** Compilar y ejecutar la prueba del Proceso Zombie
+Compila el programa en C e inspéctalo desde una segunda terminal para comprobar la existencia del proceso en estado Zombie.
 
+1. Compila el programa con GCC:
+```bash
+gcc -Wall zombie_maker.c -o zombie_maker
+```
 
-## 3. Localizar Archivos de Cabecera
+2. Ejecuta el binario generado:
+```bash
+./zombie_maker
+```
 
-na vez posicionado dentro del directorio del kernel en la terminal, abra el archivo de cabecera utilizando su editor de código preferido:
+3. Abre una **segunda terminal** en Fedora y consulta el estado del proceso hijo utilizando el PID mostrado en pantalla:
+```bash
+cat /proc/<PID_DEL_HIJO>/status | grep State
+```
+*(También puedes verificarlo usando `ps -o pid,stat,comm -p <PID_DEL_HIJO>`)*
 
-* **Para abrir en VS Code:**
-  ```bash
-  code include/linux/sched.h
-  ```
-* **Para visualizar directamente en la terminal (modo lectura):**
-  ```bash
-  less include/linux/sched.h
-  ```
-
-Dentro del archivo, utilice la función de búsqueda (`Ctrl + F`) o la búsqueda de símbolos para encontrar el inicio de la definición de la estructura principal:
-
-* **`struct task_struct {`**
-
-## 4. Navegación Estructural en el Editor
-
-1. Abra la carpeta del kernel o el archivo específico en su editor de código (por ejemplo, VS Code).
-2. Utilice la función IntelliSense (**F12**) o la búsqueda de símbolos (`Ctrl + P` y escriba `@`) para encontrar la definición de la estructura principal:
-   * **`struct task_struct`**
-
----
-
-## 5. Análisis (Entregable)
-
-Identifique y extraiga **10 subcampos** de la estructura `struct task_struct`. Organice la información en la siguiente tabla de su informe:
-
-| Nombre del Campo | Tipo de Datos C    | Subsistema Asociado | Propósito / Función               |
-| :---             | :---               | :---                | :---                              |
-| *Ej: pid*        | *pid_t*            | *Process Core*      | *Identificador único del proceso* |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-|                  |                    |                     |                                   |
-
-*Sugerencia de subsistemas a buscar:* `mm` (memoria), `fs` (sistema de archivos), `signal` (señales), `real_parent` (vínculos familiares de procesos), `cred` (credenciales y seguridad).
+**Comportamientos que podrás ver en la salida:**
+La salida en la terminal confirmará el estado: `State: Z (zombie)`. Esto demuestra que el hijo ya ha finalizado su ejecución, pero retiene su PID e historial de salida en la tabla de procesos del kernel a la espera de que el padre ejecute `wait()`.
 
 ---
 
-## 6. Verificación Empírica y Entrega
+**Paso 4:** Experimentar con el Estado de Sueño Ininterrumpible (Estado D)
+Para complementar la práctica (Laboratorio Forense 02), invocaremos operaciones sincrónicas de lectura directa al disco obligando al kernel a colocar al proceso en estado `D` (*TASK_UNINTERRUPTIBLE*).
 
-1. Inspeccione el estado del proceso actual en su máquina local ejecutando en la terminal:
-   ```bash
-   cat /proc/self/status
-   ```
-2. Realice un mapeo comparativo asociando al menos **4 de las salidas** visualizadas en la terminal con los campos C correspondientes que analizó dentro de `task_struct`.
-3. Guarde el archivo, registre sus cambios en el historial de Git y suba el trabajo final al repositorio remoto:
-   ```bash
-   git add .
-   git commit -m "Análisis de task_struct y verificación empírica completada"
-   git push origin main
-   ```
+1. En la terminal, vacía la caché de páginas de memoria del kernel para forzar lectura física en el dispositivo de almacenamiento:
+```bash
+sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+```
 
+2. Ejecuta una lectura masiva sincrónica directamente desde la unidad de almacenamiento:
+```bash
+dd if=/dev/sda of=/dev/null bs=1M count=2000 iflag=direct &
+```
+*(Nota: Si usas una unidad NVMe en tu máquina virtual o Fedora, cambia `/dev/sda` por `/dev/nvme0n1` o un archivo pesado de prueba)*.
 
+3. Monitorea las transiciones de estado a alta frecuencia con `ps`:
+```bash
+watch -n 0.2 'ps -o pid,stat,wchan:32,comm -C dd'
+```
+
+**Comportamientos que podrás ver en la salida:**
+Verás al proceso `dd` alternar entre los estados **R** (*Running*) y **D** (*Uninterruptible Sleep*). Durante el estado **D**, el campo `WCHAN` mostrará funciones internas de lectura de bloque del kernel como `blkdev_read_iter` o `submit_bio`, demostrando que el proceso está congelado a nivel de hardware y no puede ser interrumpido ni siquiera por señales como `kill -9`.
+
+---
+
+**Paso 5:** Puntos clave de validación (Checklist de éxito)
+Para asegurar una comprensión y dominio del contenido en este experimento, es necesario tomar en cuenta los siguientes conceptos teóricos:
+
+**La Anatomía del Estado Zombie (Z):** Un proceso zombie no consume memoria RAM ni ciclos de CPU, pero consume una entrada en la tabla de procesos y agota el límite de PIDs del sistema. La única forma de despejarlo es que el padre ejecute `wait()` o que el padre muera para que el proceso `init` (`systemd`) lo herede y limpie.
+
+**Inmunidad del Estado D (Uninterruptible Sleep):** Las tareas en estado D están procesando llamadas al sistema bloqueantes ligadas directamente al hardware (como discos o sistemas de archivos en red NFS). El kernel bloquea las señales para evitar la corrupción de búferes o datos en memoria.
+
+**Unificación en Linux (Estado R):** A diferencia de la teoría clásica de Sistemas Operativos que separa "Listo" y "En Ejecución", el kernel de Linux unifica ambos bajo el estado **R** (*TASK_RUNNING*), administrados mediante el planificador CFS (*Completely Fair Scheduler*) y sus colas *runqueues* asociadas a cada núcleo de CPU.

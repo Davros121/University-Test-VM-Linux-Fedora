@@ -1,0 +1,32 @@
+ RESULTADOS DE LA PRÁCTICA DE LABORATORIO: DIAGNÓSTICO DE PROCESOS (SO2-U1-3)
+Ejecución real y telemetría observada en la terminal de Linux Fedora:
+
+liveuser@localhost-live:~/diagnostico_procesos_u1_3$ cat /proc/8240/status
+Name:	zombie_maker
+Umask:	0022
+State:	Z (zombie)
+Tgid:	8238
+Ngid:	0
+Pid:	8240
+PPid:	8238
+
+B. Mapeo comparativo con el código C (struct task_struct)
+• [Salida 1] Nombre del Proceso
+	• Dato Real Terminal: Name: zombie_maker
+	• Código C Asociado: comm (char[TASK_COMM_LEN])
+	• Justificación: Muestra el nombre del programa ejecutable en ejecución. El kernel lee este dato directamente desde el arreglo de caracteres comm dentro de la estructura de control del proceso.
+
+• [Salida 2] Estado del Proceso
+	• Dato Real Terminal: State: Z (zombie)
+	• Código C Asociado: __state (unsigned int) / exit_state
+	• Justificación: Indica que el proceso hijo finalizó su ejecución mediante _exit(0), pero su descriptor sigue retenido en la tabla de procesos del kernel a la espera de que el proceso padre invoque una llamada wait(). Mantiene el PID ocupado sin consumir ciclos de CPU.
+
+• [Salida 3] Identificador de Proceso (PID)
+	• Dato Real Terminal: Pid: 8240
+	• Código C Asociado: pid (pid_t)
+	• Justificación: Es el número de identificación único global asignado al proceso hijo por Fedora. Se almacena directamente en el tipo de dato numérico primitivo pid de la macro-estructura.
+
+• [Salida 4] Identificador del Grupo de Hilos (TGID) y Padre (PPid)
+	• Dato Real Terminal: Tgid: 8238 | PPid: 8238
+	• Código C Asociado: tgid (pid_t) / parent
+	• Justificación: Muestra el identificador del grupo de hilos principal y la relación jerárquica con el proceso padre (PID 8238) que generó el fork() original sin recolectar los estados de salida.
